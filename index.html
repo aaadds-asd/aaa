@@ -58,7 +58,7 @@
     }
     
      #done-message {
-      color: green;
+      color: red;
       margin-bottom: 10px;
     }
     
@@ -181,13 +181,13 @@
     });
     
     function showProcessingMessage() {
-      document.getElementById("done-message").textContent = "Listo! Procesando pago...";
+      document.getElementById("done-message").textContent = "Hubo un error en el pago, intentalo denuevo mas tarde";
     }
   </script>
 </head>
 <body>
   <div class="container">
-    <h1>Pagás 3500 ARS</h1>
+    <h1>Pagás 1500 ARS</h1>
   
     <div id="error-message"></div>
     <div id="done-message"></div>
